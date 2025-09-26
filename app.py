@@ -8,11 +8,12 @@ from keyboards import Calendar as CalendarUtils, registration_keyboard
 from states import Booking, RegistrationStates
 from aiogram.fsm.context import FSMContext
 import logging
+from config import token
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-bot = Bot(token="7080784217:AAEeD7UxZYAEDR2Mp0DZyQOJMIXF5FArr6E")
+bot = Bot(token=token)
 dp = Dispatcher()
 
 
