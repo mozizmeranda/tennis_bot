@@ -1,6 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime, timedelta, date
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from google_calendar import *
 
 
 res_keys = InlineKeyboardMarkup(
@@ -61,6 +62,10 @@ class CalendarUtils:
         # Кнопка назад в главное меню
         buttons.append([
             InlineKeyboardButton(
+                text="⬅️ Назад",
+                callback_data="back_to_location"
+            ),
+            InlineKeyboardButton(
                 text="🏠 Главное меню",
                 callback_data="main_menu"
             )
@@ -76,6 +81,8 @@ class CalendarUtils:
             '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
             '17:00-18:00', '18:00-19:00', '19:00-20:00', '20:00-21:00'
         ]
+
+
 
         buttons = []
         # По две кнопки в ряд
@@ -103,6 +110,64 @@ class CalendarUtils:
         ])
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def get_loc_keys():
+        buttons = []
+
+        buttons.append([
+            InlineKeyboardButton(
+                text="A",
+                callback_data=f"location_A"
+            )
+        ])
+        buttons.append([
+            InlineKeyboardButton(
+                text="B",
+                callback_data=f"location_B"
+            )
+        ])
+
+        buttons.append([
+            InlineKeyboardButton(
+                text="🏠 Главное меню",
+                callback_data="main_menu"
+            )
+        ])
+
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def get_time_free_slots(location, year, month, day):
+        time_slots = returning_free_slots(location, year, month, day)
+
+        buttons = []
+        # По две кнопки в ряд
+        for i in range(0, len(time_slots), 2):
+            row = []
+            for j in range(2):
+                if i + j < len(time_slots):
+                    slot = time_slots[i + j]
+                    row.append(InlineKeyboardButton(
+                        text=slot,
+                        callback_data=f"time_{slot}"
+                    ))
+            buttons.append(row)
+
+        # Кнопки навигации
+        buttons.append([
+            InlineKeyboardButton(
+                text="⬅️ Назад",
+                callback_data="back_to_date"
+            ),
+            InlineKeyboardButton(
+                text="🏠 Главное меню",
+                callback_data="main_menu"
+            )
+        ])
+
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
     @staticmethod
     def get_locations_keyboard(date_str: str, time_slot: str, loc_a, loc_b) \
@@ -249,13 +314,13 @@ class CalendarUtils:
                 ],
                 [
                     InlineKeyboardButton(
-                        text="⬅️ Изменить корт",
-                        callback_data="back_to_court"
+                        text="⬅️ Изменить время",
+                        callback_data="back_to_time"
                     ),
                     InlineKeyboardButton(
-                        text="❌ Отменить",
-                        callback_data="cancel_booking"
-                    )
+                                text="🏠 Главное меню",
+                                callback_data="main_menu"
+                            )
                 ]
             ]
         )

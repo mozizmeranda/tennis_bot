@@ -6,3 +6,5 @@ env = Env()
 env.read_env()
 
 token = env.str("TOKEN")
+CALENDAR_A = env.str("CALENDAR_A")
+CALENDAR_B = env.str("CALENDAR_B")
