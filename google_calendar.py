@@ -127,21 +127,21 @@ def returning_free_slots(location, year, month, day):
 
     check_date = date(year, month, day)
     lst = []
-    print(len(time_slots))
-    print()
+    # print(len(time_slots))
+    # print()
     for slot in range(len(time_slots) - 1):
-        print("sl: ", slot)
+        # print("sl: ", slot)
         if not check_is_it_free_slot(location, time_slots[slot], check_date):
             lst.append(slot)
 
-    print(time_slots)
-    print(len(time_slots))
+    # print(time_slots)
+    # print(len(time_slots))
     for i in sorted(lst, reverse=True):
         time_slots.pop(i)
 
     return time_slots
 
-print(returning_free_slots("A", 2025, 10, 13))
+# print(returning_free_slots("A", 2025, 10, 13))
 def create_booking(location: str, day: str, time_slot: str, number: str, name: str):
     calendar_id = CALENDAR_ID[location]
 
@@ -149,8 +149,8 @@ def create_booking(location: str, day: str, time_slot: str, number: str, name: s
     s = f"{day}_{time_slot}"
 
     datetime_obj = datetime.strptime(s, "%Y-%m-%d_%H:%M").isoformat()
-    test = "2025-10-10_20:00"
-    print(datetime_obj)
+    # test = "2025-10-10_20:00"
+    # print(datetime_obj)
     event_start = datetime.strptime(s, "%Y-%m-%d_%H:%M")
 
     event_end = event_start + timedelta(hours=1)
