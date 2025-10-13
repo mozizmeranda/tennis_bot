@@ -2,6 +2,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery
 from database import db
 from google_calendar import create_booking_in_process
+from keyboards import CalendarUtils
 
 
 router = Router()
@@ -21,7 +22,8 @@ async def admin_confirm(call: CallbackQuery, bot: Bot):
     tg_id = lst[2]
     await call.message.edit_caption(caption=f"{text}\n\n----\n\nПодтверждено✅")
     await bot.send_message(chat_id=tg_id,
-                           text=f"{text}\n\nПлатеж подтверждено администратором✅.\n Ждем вас у нас.😇")
+                           text=f"{text}\n\nПлатеж подтверждено администратором✅.\n Ждем вас у нас.😇",
+                           reply_markup=CalendarUtils.main_menu())
 
     location = lst[3]
     date = lst[4]

@@ -261,46 +261,6 @@ class CalendarUtils:
 
         return InlineKeyboardMarkup(inline_keyboard=buttons), 1
 
-
-    # @staticmethod
-    # def get_courts_keyboard(courts: List[int], location: str, date_str: str, time_slot: str) -> InlineKeyboardMarkup:
-    #     """Создает клавиатуру с доступными кортами"""
-    #     buttons = []
-    #
-    #     if courts:
-    #         # По два корта в ряд
-    #         for i in range(0, len(courts), 2):
-    #             row = []
-    #             for j in range(2):
-    #                 if i + j < len(courts):
-    #                     court = courts[i + j]
-    #                     row.append(InlineKeyboardButton(
-    #                         text=f"Корт {court}",
-    #                         callback_data=f"court_{court}_{location}_{date_str}_{time_slot}"
-    #                     ))
-    #             buttons.append(row)
-    #     else:
-    #         buttons.append([
-    #             InlineKeyboardButton(
-    #                 text="❌ Нет свободных кортов",
-    #                 callback_data="no_courts"
-    #             )
-    #         ])
-    #
-    #     # Кнопки навигации
-    #     buttons.append([
-    #         InlineKeyboardButton(
-    #             text="⬅️ Назад",
-    #             callback_data="back_to_location"
-    #         ),
-    #         InlineKeyboardButton(
-    #             text="🏠 Главное меню",
-    #             callback_data="main_menu"
-    #         )
-    #     ])
-    #
-    #     return InlineKeyboardMarkup(inline_keyboard=buttons)
-
     @staticmethod
     def get_booking_confirmation_keyboard(booking_id) -> InlineKeyboardMarkup:
         """Клавиатура подтверждения бронирования"""
@@ -335,145 +295,47 @@ class CalendarUtils:
         ])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+    @staticmethod
+    def get_info():
+        buttons = []
+        buttons.append(
+            [
+                InlineKeyboardButton(text="МГУ", callback_data="MSU"),
+                InlineKeyboardButton(text="Аджо", callback_data="ajou")
+            ]
+        )
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-# class CalendarUtils:
-#     @staticmethod
-#     def get_date_keyboard(days_ahead: int = 7) -> InlineKeyboardMarkup:
-#         """Создает клавиатуру с датами для бронирования"""
-#         buttons = []
-#         today = date.today()
-#
-#         for i in range(days_ahead + 1):  # включая сегодня
-#             booking_date = today + timedelta(days=i)
-#             date_str = booking_date.strftime('%Y-%m-%d')
-#
-#             if i == 0:
-#                 display_date = f"Сегодня ({booking_date.strftime('%d.%m')})"
-#             elif i == 1:
-#                 display_date = f"Завтра ({booking_date.strftime('%d.%m')})"
-#             else:
-#                 # Получаем день недели на русском
-#                 weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-#                 weekday = weekdays[booking_date.weekday()]
-#                 display_date = f"{booking_date.strftime('%d.%m')} ({weekday})"
-#
-#             # Каждая дата на отдельной строке
-#             buttons.append([
-#                 InlineKeyboardButton(
-#                     text=display_date,
-#                     callback_data=f"date_{date_str}"
-#                 )
-#             ])
-#
-#         return InlineKeyboardMarkup(inline_keyboard=buttons)
-#
-#     @staticmethod
-#     def get_time_slots_keyboard() -> InlineKeyboardMarkup:
-#         """Создает клавиатуру с временными слотами"""
-#         time_slots = [
-#             '09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00',
-#             '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00',
-#             '17:00-18:00', '18:00-19:00', '19:00-20:00', '20:00-21:00'
-#         ]
-#
-#         buttons = []
-#         # По две кнопки в ряд
-#         for i in range(0, len(time_slots), 2):
-#             row = []
-#             for j in range(2):
-#                 if i + j < len(time_slots):
-#                     slot = time_slots[i + j]
-#                     row.append(InlineKeyboardButton(
-#                         text=slot,
-#                         callback_data=f"time_{slot}"
-#                     ))
-#             buttons.append(row)
-#
-#         return InlineKeyboardMarkup(inline_keyboard=buttons)
-#
-#     @staticmethod
-#     def get_locations_keyboard(date_str: str, time_slot: str, available_locations: List[str]) -> InlineKeyboardMarkup:
-#         """Создает клавиатуру с доступными локациями"""
-#         buttons = []
-#
-#         if available_locations:
-#             for location in available_locations:
-#                 buttons.append([
-#                     InlineKeyboardButton(
-#                         text=location,
-#                         callback_data=f"location_{location}_{date_str}_{time_slot}"
-#                     )
-#                 ])
-#         else:
-#             buttons.append([
-#                 InlineKeyboardButton(
-#                     text="❌ Нет доступных локаций",
-#                     callback_data="no_locations"
-#                 )
-#             ])
-#
-#         return InlineKeyboardMarkup(inline_keyboard=buttons)
-#
-#     @staticmethod
-#     def get_courts_keyboard(courts: List[int], location: str, date_str: str, time_slot: str) -> InlineKeyboardMarkup:
-#         """Создает клавиатуру с доступными кортами"""
-#         buttons = []
-#
-#         if courts:
-#             # По два корта в ряд
-#             for i in range(0, len(courts), 2):
-#                 row = []
-#                 for j in range(2):
-#                     if i + j < len(courts):
-#                         court = courts[i + j]
-#                         row.append(InlineKeyboardButton(
-#                             text=f"Корт {court}",
-#                             callback_data=f"court_{court}_{location}_{date_str}_{time_slot}"
-#                         ))
-#                 buttons.append(row)
-#         else:
-#             buttons.append([
-#                 InlineKeyboardButton(
-#                     text="❌ Нет свободных кортов",
-#                     callback_data="no_courts"
-#                 )
-#             ])
-#
-#         return InlineKeyboardMarkup(inline_keyboard=buttons)
-#
-#     @staticmethod
-#     def get_back_button() -> InlineKeyboardMarkup:
-#         """Кнопка возврата в главное меню"""
-#         return InlineKeyboardMarkup(
-#             inline_keyboard=[
-#                 [
-#                     InlineKeyboardButton(
-#                         text="🏠 Главное меню",
-#                         callback_data="main_menu"
-#                     )
-#                 ]
-#             ]
-#         )
-#
-#     @staticmethod
-#     def get_booking_confirmation_keyboard(booking_id: int) -> InlineKeyboardMarkup:
-#         """Клавиатура подтверждения бронирования"""
-#         return InlineKeyboardMarkup(
-#             inline_keyboard=[
-#                 [
-#                     InlineKeyboardButton(
-#                         text="✅ Забронировать",
-#                         callback_data=f"confirm_booking_{booking_id}"
-#                     )
-#                 ],
-#                 [
-#                     InlineKeyboardButton(
-#                         text="❌ Отменить",
-#                         callback_data="cancel_booking"
-#                     )
-#                 ]
-#             ]
-#         )
+    @staticmethod
+    def info_keys():
+        buttons = []
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Вернуться назад",
+                    callback_data="back_to_info"
+                ),
+                InlineKeyboardButton(
+                    text="🏠 Главное меню",
+                    callback_data="main_menu"
+                )
+            ]
+        )
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def main_menu():
+        buttons = []
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text="🏠 Главное меню",
+                    callback_data="main_menu"
+                )
+            ]
+        )
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
 Calendar = CalendarUtils()
 

@@ -7,6 +7,7 @@ from keyboards import res_keys
 from keyboards import Calendar as CalendarUtils, registration_keyboard
 from states import Booking, RegistrationStates
 from admin import router as admin_router
+from info import router as info_router
 from aiogram.fsm.context import FSMContext
 import logging
 from config import token
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=token)
 dp = Dispatcher()
 dp.include_router(admin_router)
+dp.include_router(info_router)
 
 locs = {
     "A": "МГУ",
@@ -150,7 +152,7 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
 
     number = db.get_number_by_id(telegram_id)
     text = (
-        f"✅ **Бронирование создано!**\n\n"
+        f"✅ Бронирование создано!\n\n"
         f"📅 Дата: {selected_date}\n"
         f"⏰ Время: {selected_time}\n"
         f"🏢 Локация: {locs[selected_location]}\n"
@@ -163,7 +165,7 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
                          reply_markup=CalendarUtils.admin_keyboard(booking_info))
 
     await message.answer("Спасибо, дождитесь подтверждения администратора!😇\nВам придет "
-                         "сообщщение, когда платеж будет одобрен")
+                         "сообщщение, когда платеж будет одобрен", reply_markup=CalendarUtils.main_menu())
     await state.clear()
 
 
@@ -178,7 +180,6 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
 #-------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------
-
 
 
 @dp.callback_query(F.data == "back_to_date")
@@ -251,9 +252,6 @@ async def cancel_booking(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=res_keys
     )
     await callback.answer("Бронирование отменено")
-
-
-
 
 
 async def main():
