@@ -2,10 +2,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta, timezone, time, date
 from config import CALENDAR_A, CALENDAR_B
+from multiprocessing import Process
+
 
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-# CALENDAR_ID = '5376c2a68f78c3127e9a387be1cbe521f349757008421fb071e01adce2dfcfd5@group.calendar.google.com'
 
 CALENDAR_ID = {
     "A": CALENDAR_A,
@@ -23,6 +24,7 @@ credentials = service_account.Credentials.from_service_account_file(
 )
 
 service = build('calendar', 'v3', credentials=credentials)
+
 
 def list_events():
     now = datetime.now(timezone.utc)
@@ -48,34 +50,6 @@ def list_events():
                 print(f"{start} - {event.get('summary')}")
     except Exception as e:
         print(f"Ошибка API: {e}")
-
-
-
-def create_event():
-    # Ташкентское время UTC+5
-    tz = timezone(timedelta(hours=5))
-    now = datetime.now(tz)
-    event_start = now.replace(hour=21, minute=0, second=0, microsecond=0)
-    event_end = event_start + timedelta(hours=1)
-
-    event = {
-        'summary': 'Тестовое событие — бронь корта',
-        'location': 'Локация А',
-        'description': 'Событие создано автоматически для теста',
-        'start': {
-            'dateTime': event_start.isoformat(),
-            'timeZone': 'Asia/Tashkent',
-        },
-        'end': {
-            'dateTime': event_end.isoformat(),
-            'timeZone': 'Asia/Tashkent',
-        },
-        'reminders': {
-            'useDefault': True,
-        },
-    }
-    created_event = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
-    print(f"Событие создано: {created_event.get('htmlLink')}")
 
 
 WORK_START = time(6, 0)
@@ -124,9 +98,9 @@ def check_is_it_free_slot(
             singleEvents=True,
             orderBy='startTime'
         ).execute()
-        print(events_result)
+        # print(events_result)
         events = events_result.get('items', [])
-        print(len(events))
+        # print(len(events))
 
         if len(events) >= courts[location]:
             print(f"Слот {slot} на дату {date} занят.")
@@ -139,6 +113,8 @@ def check_is_it_free_slot(
         print(f"Ошибка API: {e}")
         return False
 
+# print(check_is_it_free_slot("A", "20:00-21:00", date(2025, 10, 11)))
+
 
 def returning_free_slots(location, year, month, day):
 
@@ -150,25 +126,66 @@ def returning_free_slots(location, year, month, day):
     ]
 
     check_date = date(year, month, day)
+    lst = []
     print(len(time_slots))
+    print()
     for slot in range(len(time_slots) - 1):
-        # print(slot)
+        print("sl: ", slot)
         if not check_is_it_free_slot(location, time_slots[slot], check_date):
-            time_slots.pop(slot)
+            lst.append(slot)
+
+    print(time_slots)
+    print(len(time_slots))
+    for i in sorted(lst, reverse=True):
+        time_slots.pop(i)
 
     return time_slots
 
+print(returning_free_slots("A", 2025, 10, 13))
+def create_booking(location: str, day: str, time_slot: str, number: str, name: str):
+    calendar_id = CALENDAR_ID[location]
 
-# print(returning_free_slots("A"))
-#
-#
-# location_calendar_id = '5376c2a68f78c3127e9a387be1cbe521f349757008421fb071e01adce2dfcfd5@group.calendar.google.com'
-# check_date = date(2025, 10, 8)
-# time_slot = "20:00-21:00"
+    time_slot = time_slot.split("-")[0]
+    s = f"{day}_{time_slot}"
 
-# is_free = check_is_it_free_slot("A", check_date, time_slot)
-# print(f"Свободен ли слот {time_slot} на {check_date}? {is_free}")
+    datetime_obj = datetime.strptime(s, "%Y-%m-%d_%H:%M").isoformat()
+    test = "2025-10-10_20:00"
+    print(datetime_obj)
+    event_start = datetime.strptime(s, "%Y-%m-%d_%H:%M")
 
-# if __name__ == "__main__":
-#     list_events()
-#     create_event()
+    event_end = event_start + timedelta(hours=1)
+
+    # event_end = event_start + timedelta(hours=1)
+    #
+    event = {
+        'summary': f'{name}',
+        'description': f'{number}',
+        'start': {
+            'dateTime': event_start.isoformat(),
+            'timeZone': 'Asia/Tashkent',
+        },
+        'end': {
+            'dateTime': event_end.isoformat(),
+            'timeZone': 'Asia/Tashkent',
+        },
+        'reminders': {
+            'useDefault': True,
+        },
+    }
+    created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
+    print(f"Событие создано: {created_event.get('htmlLink')}")
+
+
+def create_booking_in_process(location: str, day: str, time_slot: str, number: str, name: str):
+    """Запуск создания бронирования в отдельном процессе"""
+    process = Process(
+        target=create_booking,
+        args=(location, day, time_slot, number, name)
+    )
+    process.daemon = True
+    process.start()
+
+
+
+
+

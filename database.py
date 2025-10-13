@@ -38,7 +38,6 @@ class Database:
     def create_booking_table(self):
         sql = """CREATE TABLE IF NOT EXISTS bookings (
                     telegram_id INTEGER NOT NULL,
-                    court_number INTEGER NOT NULL,
                     location TEXT NOT NULL,
                     booking_date DATE NOT NULL,
                     time_slot TEXT NOT NULL,
@@ -51,11 +50,11 @@ class Database:
         params = (id, name, username, number)
         self.execute(sql, parameters=params, commit=True)
 
-    def create_booking(self, telegram_id, court_number, location, booking_date, time_slot, screenshot):
+    def create_booking(self, telegram_id, location, booking_date, time_slot, screenshot):
         sql = ("INSERT OR IGNORE INTO bookings "
-               "(telegram_id, court_number, location, booking_date, time_slot, screenshot_path) "
-               "VALUES (?, ?, ?, ?, ?, ?)")
-        params = (telegram_id, court_number, location, booking_date, time_slot, screenshot)
+               "(telegram_id, location, booking_date, time_slot, screenshot_path) "
+               "VALUES (?, ?, ?, ?, ?)")
+        params = (telegram_id,location, booking_date, time_slot, screenshot)
         self.execute(sql, parameters=params, commit=True)
 
     def check_free_courts(self, date, time, location):
@@ -72,8 +71,14 @@ class Database:
         params = (id,)
         return self.execute(sql, parameters=params, fetchone=True)[0]
 
+    def get_user_data_by_id(self, id):
+        sql = "SELECT number, username FROM users WHERE id=?"
+        params = (id,)
+        return self.execute(sql, parameters=params, fetchone=True)
+
 
 db = Database()
+
 # db.create_table()
 
 

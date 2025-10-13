@@ -6,6 +6,7 @@ from database import db
 from keyboards import res_keys
 from keyboards import Calendar as CalendarUtils, registration_keyboard
 from states import Booking, RegistrationStates
+from admin import router as admin_router
 from aiogram.fsm.context import FSMContext
 import logging
 from config import token
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 bot = Bot(token=token)
 dp = Dispatcher()
+dp.include_router(admin_router)
 
 
 @dp.message(Command("start"))
@@ -68,6 +70,9 @@ async def get_locations(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("date_"), Booking.day)
 async def date(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer("Пожалуйста подождите немного. Проводится поиск свободных кортов ☺️", show_alert=True)
+
+    await callback.message.edit_text("Пожалуйста подождите :)")
+
     selected_date = callback.data.split("_")[1]
 
     selected_day = selected_date.split("-")
@@ -121,13 +126,54 @@ async def confirm_key_clicked(call: CallbackQuery, state: FSMContext):
     await state.set_state(Booking.screenshot)
 
 
+@dp.message(Booking.screenshot)
+async def getting_screenshot(message: types.Message, state: FSMContext):
+    screenshot = message.message_id
+
+    if not message.photo:
+        await message.answer("Отправьте пожалуйста фотографию вашей транзакции.\nСкриншот!")
+        await bot.delete_message(message.from_user.id, message_id=screenshot)
+        return
+
+    data = await state.get_data()
+    print(data)
+    telegram_id = data.get('telegram_id')
+
+    selected_date = data.get('selected_date')
+    selected_time = data.get('selected_time')
+    selected_location = data.get('selected_location')
+    booking_info = f"{telegram_id}_{selected_location}_{selected_date}_{selected_time}"
+
+    number = db.get_number_by_id(telegram_id)
+    text = (
+        f"✅ **Бронирование создано!**\n\n"
+        f"📅 Дата: {selected_date}\n"
+        f"⏰ Время: {selected_time}\n"
+        f"🏢 Локация: {selected_location}\n"
+        f"Номер: {number}"
+    )
+
+    await bot.send_photo(chat_id=827950639,
+                         photo=message.photo[-1].file_id,
+                         caption=text,
+                         reply_markup=CalendarUtils.admin_keyboard(booking_info))
+
+    await message.answer("Спасибо, дождитесь подтверждения администратора!😇\nВам придет "
+                         "сообщщение, когда платеж будет одобрен")
+    await state.clear()
 
 
-
-
-
-
-
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
 
 
 
@@ -143,9 +189,6 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
         f"📅 Теперь выберите дату:",
         reply_markup=CalendarUtils.get_date_keyboard(days_ahead=7)
     )
-
-
-
 
 
 @dp.callback_query(F.data == "back_to_location")
@@ -183,7 +226,6 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
     )
 
 
-
 @dp.callback_query(F.data == "main_menu")
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
     """Возврат в главное меню"""
@@ -193,6 +235,18 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=res_keys  # Ваша главная клавиатура
     )
     await callback.answer()
+
+
+@dp.callback_query(F.data == "cancel_booking")
+async def cancel_booking(callback: types.CallbackQuery, state: FSMContext):
+    """Отмена бронирования"""
+    await state.clear()
+    await callback.message.edit_text(
+        "❌ Бронирование отменено.\n\n"
+        "Выберите действие:",
+        reply_markup=res_keys
+    )
+    await callback.answer("Бронирование отменено")
 
 
 
