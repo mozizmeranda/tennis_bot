@@ -6,6 +6,11 @@ from google_calendar import create_booking_in_process
 
 router = Router()
 
+locs = {
+    "A": "МГУ",
+    "B": "Аджо"
+}
+
 
 @router.callback_query(F.data.startswith("admin_confirm_"))
 async def admin_confirm(call: CallbackQuery, bot: Bot):

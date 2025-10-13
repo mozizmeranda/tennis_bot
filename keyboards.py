@@ -117,13 +117,13 @@ class CalendarUtils:
 
         buttons.append([
             InlineKeyboardButton(
-                text="A",
+                text="МГУ",
                 callback_data=f"location_A"
             )
         ])
         buttons.append([
             InlineKeyboardButton(
-                text="B",
+                text="Аджо",
                 callback_data=f"location_B"
             )
         ])
