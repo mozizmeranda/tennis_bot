@@ -1,0 +1,2 @@
+aiogram
+environs~=14.1.1

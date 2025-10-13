@@ -47,7 +47,7 @@ def list_events():
         else:
             for event in events:
                 start = event['start'].get('dateTime', event['start'].get('date'))
-                print(f"{start} - {event.get('summary')}")
+                # print(f"{start} - {event.get('summary')}")
     except Exception as e:
         print(f"Ошибка API: {e}")
 
@@ -103,10 +103,10 @@ def check_is_it_free_slot(
         # print(len(events))
 
         if len(events) >= courts[location]:
-            print(f"Слот {slot} на дату {date} занят.")
+            # print(f"Слот {slot} на дату {date} занят.")
             return False  # Есть брони — слот занят
         else:
-            print(f"Слот {slot} на дату {date} свободен.")
+            # print(f"Слот {slot} на дату {date} свободен.")
             return True  # Нет брони — слот свободен
     except Exception as e:
 
