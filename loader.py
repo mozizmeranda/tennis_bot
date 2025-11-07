@@ -3,6 +3,7 @@ import asyncio
 from aiogram.types import CallbackQuery
 from aiogram.filters import Command
 from database import db
+from aiogram.types import ReplyKeyboardRemove
 from keyboards import res_keys
 from keyboards import Calendar as CalendarUtils, registration_keyboard
 from states import Booking, RegistrationStates
@@ -12,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta, timezone, time, date
 import logging
-from config import token
+from config import *
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,7 +52,14 @@ async def get_number(message: types.Message, state: FSMContext):
 У нас доступно 5 кортов в 2 локациях.
 
 Выберите действие:"""
-        await message.answer(greeting, reply_markup=res_keys)
+        await message.answer(
+            greeting,
+            reply_markup=ReplyKeyboardRemove()  # Сначала убираем старую
+        )
+        await message.answer(
+            "Выберите действие:",
+            reply_markup=res_keys  # Затем показываем новую
+        )
         await state.clear()
 
     else:
@@ -176,7 +184,7 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
         f"Номер: {number}"
     )
 
-    await bot.send_photo(chat_id=827950639,
+    await bot.send_photo(chat_id=admin_id,
                          photo=message.photo[-1].file_id,
                          caption=text,
                          reply_markup=CalendarUtils.admin_keyboard(booking_info))

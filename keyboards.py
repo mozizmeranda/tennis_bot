@@ -375,7 +375,8 @@ registration_keyboard = ReplyKeyboardMarkup(
             KeyboardButton(text="Отправить номер 📱", request_contact=True)
         ]
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
+    one_time_keyboard=True
 )
 
 rs_confirm_keys = InlineKeyboardMarkup(
