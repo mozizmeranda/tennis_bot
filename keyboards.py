@@ -137,12 +137,49 @@ class CalendarUtils:
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+    # @staticmethod
+    # def get_time_free_slots(location, year, month, day):
+    #     time_slots = returning_free_slots(location, year, month, day)
+    #
+    #     buttons = []
+    #     # По две кнопки в ряд
+    #     for i in range(0, len(time_slots), 2):
+    #         row = []
+    #         for j in range(2):
+    #             if i + j < len(time_slots):
+    #                 slot = time_slots[i + j]
+    #                 row.append(InlineKeyboardButton(
+    #                     text=slot,
+    #                     callback_data=f"time_{slot}"
+    #                 ))
+    #         buttons.append(row)
+    #
+    #     # Кнопки навигации
+    #     buttons.append([
+    #         InlineKeyboardButton(
+    #             text="⬅️ Назад",
+    #             callback_data="back_to_date"
+    #         ),
+    #         InlineKeyboardButton(
+    #             text="🏠 Главное меню",
+    #             callback_data="main_menu"
+    #         )
+    #     ])
+    #
+    #     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
     @staticmethod
-    def get_time_free_slots(location, year, month, day):
-        time_slots = returning_free_slots(location, year, month, day)
+    async def get_time_free_slots(location, year, month, day):
+        # Запускаем синхронную функцию в отдельном потоке
+        time_slots = await asyncio.to_thread(
+            returning_free_slots,
+            location,
+            year,
+            month,
+            day
+        )
 
         buttons = []
-        # По две кнопки в ряд
         for i in range(0, len(time_slots), 2):
             row = []
             for j in range(2):
@@ -154,16 +191,9 @@ class CalendarUtils:
                     ))
             buttons.append(row)
 
-        # Кнопки навигации
         buttons.append([
-            InlineKeyboardButton(
-                text="⬅️ Назад",
-                callback_data="back_to_date"
-            ),
-            InlineKeyboardButton(
-                text="🏠 Главное меню",
-                callback_data="main_menu"
-            )
+            InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_date"),
+            InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
         ])
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -348,3 +378,11 @@ registration_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+rs_confirm_keys = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Подвтертдить", callback_data="rs_confirm"),
+            InlineKeyboardButton(text="Отменить", callback_data="rs_cancel")
+        ]
+    ]
+)

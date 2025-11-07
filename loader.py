@@ -9,21 +9,29 @@ from states import Booking, RegistrationStates
 from admin import router as admin_router
 from info import router as info_router
 from aiogram.fsm.context import FSMContext
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from datetime import datetime, timedelta, timezone, time, date
 import logging
 from config import token
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-bot = Bot(token=token)
+bot = Bot(token=token,  proxy='http://proxy.server:3128')
 dp = Dispatcher()
 dp.include_router(admin_router)
 dp.include_router(info_router)
-
+scheduler = AsyncIOScheduler()
 locs = {
     "A": "МГУ",
     "B": "Аджо"
 }
+
+
+async def scheduled_analysis():
+    day = datetime.strftime((datetime.now(tz=timezone(timedelta(hours=5))) - timedelta(days=1)), "%Y-%m-%d")
+    db.delete_booking(day)
+
 
 @dp.message(Command("start"))
 async def get_start(message: types.Message, state: FSMContext):
@@ -52,6 +60,7 @@ async def get_number(message: types.Message, state: FSMContext):
 
 @dp.callback_query(F.data == "book_court")
 async def get_start(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     await state.set_state(Booking.location)
     await callback.message.edit_text(
         "📍 Выберите локацию для бронирования:",
@@ -61,6 +70,7 @@ async def get_start(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("location_"), Booking.location)
 async def get_locations(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     selected_location = callback.data.split("_")[1]
     await state.update_data(selected_location=selected_location)
 
@@ -90,22 +100,23 @@ async def date(callback: types.CallbackQuery, state: FSMContext):
     selected_location = await state.get_value("selected_location")
 
     await state.set_state(Booking.time)
-
+    k = await CalendarUtils.get_time_free_slots(selected_location, year, month, day)
     await callback.message.edit_text(
         f"📍 Выбрана локация: <b>{locs[selected_location]}</b>\n"
         f"📅 Выбрана дата: <b>{selected_date}</b>\n⏳ Выберите время. Доступные время для бронирования:",
-        parse_mode="HTML", reply_markup=CalendarUtils.get_time_free_slots(selected_location, year, month, day)
+        parse_mode="HTML", reply_markup=k
     )
 
 
 @dp.callback_query(F.data.startswith("time_"), Booking.time)
 async def time_slot(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     selected_time = callback.data.split("_")[1]
     # print(selected_time)
     await state.update_data(selected_time=selected_time, telegram_id=callback.from_user.id)
     selected_location = await state.get_value("selected_location")
     selected_date = await state.get_value("selected_date")
-
+    db.create_pending_rent(selected_location, selected_date, selected_time)
     booking_info = (
         f"✅ <b>Бронирование создано!</b>\n\n"
         f"🏢 Локация: <b>{locs[selected_location]}</b>\n"
@@ -125,8 +136,14 @@ async def time_slot(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("confirm_booking_"))
 async def confirm_key_clicked(call: CallbackQuery, state: FSMContext):
+    await call.answer()
+    t = (f"Чтобы забронировать корт, вам нужно внести предоплату в размере 50 000 сум и отправить скриншот транзакции.\n"
+         f"Реквизиты: <i>9860170120015988</i>\n<b>Karimov B</b>.\n\n\nКак только переведете, скиньте пожалуйста "
+         f"скриншот перевода прямо сюда.")
+
     await call.message.edit_text(
-        "Отправьте скриншот транзакции. \n\nЧтобы поменять что-то вам нужно вернуться в главное меню.",
+        text=t,
+        parse_mode="HTML",
         reply_markup=CalendarUtils.get_cancel_keyboard()
     )
     await state.set_state(Booking.screenshot)
@@ -164,8 +181,9 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
                          caption=text,
                          reply_markup=CalendarUtils.admin_keyboard(booking_info))
 
-    await message.answer("Спасибо, дождитесь подтверждения администратора!😇\nВам придет "
+    bot_msg = await message.answer("Спасибо, дождитесь подтверждения администратора!😇\nВам придет "
                          "сообщщение, когда платеж будет одобрен", reply_markup=CalendarUtils.main_menu())
+    db.insert_table_deletes(message.from_user.id, bot_msg.message_id)
     await state.clear()
 
 
@@ -184,6 +202,7 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
 
 @dp.callback_query(F.data == "back_to_date")
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     """Возврат в панель с локациями"""
     selected_location = await state.get_value("selected_location")
 
@@ -198,6 +217,7 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data == "back_to_location")
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     """Возврат в панель с локациями"""
 
     await state.set_state(Booking.location)
@@ -213,27 +233,37 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer("Пожалуйста подождите немного. Проводится поиск свободных кортов ☺️", show_alert=True)
     selected_date = await state.get_value("selected_date")
+    selected_location = await state.get_value("selected_location")
+    selected_time = await state.get_value('selected_time')
 
     selected_day = selected_date.split("-")
     year = int(selected_day[0])
     month = int(selected_day[1])
     day = int(selected_day[2])
 
+    db.kill_pending(selected_location, selected_date, selected_time)
+
     await state.update_data(selected_date=selected_date)
     selected_location = await state.get_value("selected_location")
 
     await state.set_state(Booking.time)
-
+    k = await CalendarUtils.get_time_free_slots(selected_location, year, month, day)
     await callback.message.edit_text(
         f"📍 Выбрана локация: {locs[selected_location]}\n"
         f"📅 Выбрана дата: {selected_date}\n⏳ Выберите время. Доступные время для бронирования:",
-        reply_markup=CalendarUtils.get_time_free_slots(selected_location, year, month, day)
+        reply_markup=k
     )
 
 
 @dp.callback_query(F.data == "main_menu")
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     """Возврат в главное меню"""
+    selected_date = await state.get_value("selected_date")
+    selected_location = await state.get_value("selected_location")
+    selected_time = await state.get_value('selected_time')
+    if selected_time:
+        db.kill_pending(selected_location, selected_date, selected_time)
     await state.clear()  # Очищаем состояние
     await callback.message.edit_text(
         "🏠 Главное меню\n\nВыберите действие:",
@@ -244,6 +274,7 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data == "cancel_booking")
 async def cancel_booking(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
     """Отмена бронирования"""
     await state.clear()
     await callback.message.edit_text(
@@ -255,6 +286,11 @@ async def cancel_booking(callback: types.CallbackQuery, state: FSMContext):
 
 
 async def main():
+
+    # scheduler.add_job(scheduled_analysis, 'cron', hour=0, minute=1)
+    #
+    # scheduler.start()
+
     await dp.start_polling(bot)
 
 

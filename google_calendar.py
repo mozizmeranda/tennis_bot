@@ -3,7 +3,8 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta, timezone, time, date
 from config import CALENDAR_A, CALENDAR_B
 from multiprocessing import Process
-
+from database import db
+import asyncio
 
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/calendar']
@@ -101,8 +102,9 @@ def check_is_it_free_slot(
         # print(events_result)
         events = events_result.get('items', [])
         # print(len(events))
+        check_in_pending = db.is_it_pending(location, date, slot)
 
-        if len(events) >= courts[location]:
+        if len(events) >= courts[location] and check_in_pending == 0:
             # print(f"Слот {slot} на дату {date} занят.")
             return False  # Есть брони — слот занят
         else:
@@ -140,6 +142,8 @@ def returning_free_slots(location, year, month, day):
         time_slots.pop(i)
 
     return time_slots
+
+
 
 # print(returning_free_slots("A", 2025, 10, 13))
 def create_booking(location: str, day: str, time_slot: str, number: str, name: str):

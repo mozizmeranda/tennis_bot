@@ -11,3 +11,7 @@ class Booking(StatesGroup):
     location = State()
     court = State()
     screenshot = State()
+
+class Mailing(StatesGroup):
+    get_text = State()
+    confirm_mailing = State()

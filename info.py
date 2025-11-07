@@ -1,8 +1,13 @@
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery
 from keyboards import CalendarUtils
+from database import db
 
 router = Router()
+locs = {
+    "A": "МГУ",
+    "B": "Аджо"
+}
 
 
 @router.callback_query(F.data == "info")
@@ -51,5 +56,23 @@ async def msu_info(call: CallbackQuery):
 async def get_back_to_info(call: CallbackQuery):
     await call.message.edit_text(
         "Выберите корт, про который вы хотите узнать", reply_markup=CalendarUtils.get_info()
+    )
+
+
+@router.callback_query(F.data == "my_bookings")
+async def my_bookings(call: CallbackQuery):
+    print(call.from_user.id)
+    all_bookings = db.get_all_bookings(call.from_user.id)
+    print(all_bookings)
+    t = ""
+    for boooking in all_bookings:
+        t += f"<b>Локация:</b> {locs[boooking[1]]}\n<b>Дата</b>: {boooking[2]}\n<b>Время</b>: {boooking[3]}\n\n"
+
+    text = f"<b>Ваши бронирования:</b>\n\n{t}"
+
+    await call.message.edit_text(
+        text=text,
+        parse_mode="HTML",
+        reply_markup=CalendarUtils.main_menu()
     )
 
