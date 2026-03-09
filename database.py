@@ -140,9 +140,12 @@ class Database:
         sql = "SELECT * FROM pending_table WHERE location=? AND day=? AND time_slot=?"
         params = (location, day, time_slot)
         data = self.execute(sql, parameters=params, fetchone=True)
+        print(f"data = {data}")
         if data:
+            print("PENDING 1")
             return 1
         else:
+            print("PENDING 1")
             return 0
         # return data
 

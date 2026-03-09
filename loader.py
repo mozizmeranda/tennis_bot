@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery
 from aiogram.filters import Command
 from database import db
 from aiogram.types import ReplyKeyboardRemove
-from keyboards import res_keys
+from keyboards import res_keys, keyboard
 from keyboards import Calendar as CalendarUtils, registration_keyboard
 from states import Booking, RegistrationStates
 from admin import router as admin_router
@@ -14,6 +14,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta, timezone, time, date
 import logging
 from config import *
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import WebAppInfo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,6 +41,11 @@ async def get_start(message: types.Message, state: FSMContext):
     await state.set_state(RegistrationStates.waiting_phone)
     await message.answer("Пожалуйста отправьте номер телефона нажав на кнопку ниже⬇️ или напишите текстом",
                          reply_markup=registration_keyboard)
+
+
+@dp.message(Command("app"))
+async def cmd_start(message: types.Message):
+    await message.answer("Бронирование кортов:", reply_markup=keyboard)
 
 
 @dp.message(RegistrationStates.waiting_phone)
@@ -93,68 +100,89 @@ async def get_locations(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("date_"), Booking.day)
 async def date(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer("Пожалуйста подождите немного. Проводится поиск свободных кортов ☺️", show_alert=True)
+    print(f"State: {state.get_state()}")
+    try:
+        await callback.answer("Пожалуйста подождите немного. Проводится поиск свободных кортов ☺️", show_alert=True)
 
-    await callback.message.edit_text("Пожалуйста подождите :)")
+        await callback.message.edit_text("Пожалуйста подождите :)")
 
-    selected_date = callback.data.split("_")[1]
+        selected_date = callback.data.split("_")[1]
 
-    selected_day = selected_date.split("-")
-    year = int(selected_day[0])
-    month = int(selected_day[1])
-    day = int(selected_day[2])
+        selected_day = selected_date.split("-")
+        year = int(selected_day[0])
+        month = int(selected_day[1])
+        day = int(selected_day[2])
 
-    await state.update_data(selected_date=selected_date)
-    selected_location = await state.get_value("selected_location")
+        await state.update_data(selected_date=selected_date)
+        selected_location = await state.get_value("selected_location")
+        print(f"LOCATION: {selected_location}")
+        print(f"State: {state.get_state()}")
 
-    await state.set_state(Booking.time)
-    k = await CalendarUtils.get_time_free_slots(selected_location, year, month, day)
-    await callback.message.edit_text(
-        f"📍 Выбрана локация: <b>{locs[selected_location]}</b>\n"
-        f"📅 Выбрана дата: <b>{selected_date}</b>\n⏳ Выберите время. Доступные время для бронирования:",
-        parse_mode="HTML", reply_markup=k
-    )
+        await state.set_state(Booking.time)
+        k = await CalendarUtils.get_time_free_slots(selected_location, year, month, day)
+        await callback.message.edit_text(
+            f"📍 Выбрана локация: <b>{locs[selected_location]}</b>\n"
+            f"📅 Выбрана дата: <b>{selected_date}</b>\n⏳ Выберите время. Доступные время для бронирования:",
+            parse_mode="HTML", reply_markup=k
+        )
+    except Exception as e:
+        await callback.message.edit_text(
+            f"К сожалению ваша сессия была сброшена, попробуйте еще раз заново через главное меню. Спасибо за понимание :)",
+            reply_markup=CalendarUtils.main_menu()
+        )
 
 
 @dp.callback_query(F.data.startswith("time_"), Booking.time)
 async def time_slot(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    selected_time = callback.data.split("_")[1]
-    # print(selected_time)
-    await state.update_data(selected_time=selected_time, telegram_id=callback.from_user.id)
-    selected_location = await state.get_value("selected_location")
-    selected_date = await state.get_value("selected_date")
-    db.create_pending_rent(selected_location, selected_date, selected_time)
-    booking_info = (
-        f"✅ <b>Бронирование создано!</b>\n\n"
-        f"🏢 Локация: <b>{locs[selected_location]}</b>\n"
-        f"📅 Дата: <b>{selected_date}</b>\n"
-        f"⏰ Время: {selected_time}\n"
-        f"💰 <b>Для завершения бронирования:</b>\n"
-        f"Если все верно, нажмите кнопку 'Подтвердить'\n\n"
-        f"Поспешите, корт могут забронить раньше вас."
-    )
+    try:
+        await callback.answer()
+        selected_time = callback.data.split("_")[1]
+        # print(selected_time)
+        await state.update_data(selected_time=selected_time, telegram_id=callback.from_user.id)
+        selected_location = await state.get_value("selected_location")
+        selected_date = await state.get_value("selected_date")
+        db.create_pending_rent(selected_location, selected_date, selected_time)
+        booking_info = (
+            f"✅ <b>Бронирование создано!</b>\n\n"
+            f"🏢 Локация: <b>{locs[selected_location]}</b>\n"
+            f"📅 Дата: <b>{selected_date}</b>\n"
+            f"⏰ Время: {selected_time}\n"
+            f"💰 <b>Для завершения бронирования:</b>\n"
+            f"Если все верно, нажмите кнопку 'Подтвердить'\n\n"
+            f"Поспешите, корт могут забронить раньше вас."
+        )
 
-    booking_id = f"{callback.message.from_user.id}_{callback.data}"
-    await callback.message.edit_text(
-        booking_info,
-        parse_mode="HTML", reply_markup=CalendarUtils.get_booking_confirmation_keyboard(booking_id)
-    )
+        booking_id = f"{callback.message.from_user.id}_{callback.data}"
+        await callback.message.edit_text(
+            booking_info,
+            parse_mode="HTML", reply_markup=CalendarUtils.get_booking_confirmation_keyboard(booking_id)
+        )
+    except Exception as exp:
+        await callback.message.edit_text(
+            f"К сожалению ваша сессия была сброшена, попробуйте еще раз заново через главное меню. Спасибо за понимание :)",
+            reply_markup=CalendarUtils.main_menu()
+        )
 
 
 @dp.callback_query(F.data.startswith("confirm_booking_"))
 async def confirm_key_clicked(call: CallbackQuery, state: FSMContext):
-    await call.answer()
-    t = (f"Чтобы забронировать корт, вам нужно внести предоплату в размере 50 000 сум и отправить скриншот транзакции.\n"
-         f"Реквизиты: <i>9860170120015988</i>\n<b>Karimov B</b>.\n\n\nКак только переведете, скиньте пожалуйста "
-         f"скриншот перевода прямо сюда.")
+    try:
+        await call.answer()
+        t = (f"Чтобы забронировать корт, вам нужно внести предоплату в размере 50 000 сум и отправить скриншот транзакции.\n"
+             f"Реквизиты: <i>9860170120015988</i>\n<b>Karimov B</b>.\n\n\nКак только переведете, скиньте пожалуйста "
+             f"скриншот перевода прямо сюда.")
 
-    await call.message.edit_text(
-        text=t,
-        parse_mode="HTML",
-        reply_markup=CalendarUtils.get_cancel_keyboard()
-    )
-    await state.set_state(Booking.screenshot)
+        await call.message.edit_text(
+            text=t,
+            parse_mode="HTML",
+            reply_markup=CalendarUtils.get_cancel_keyboard()
+        )
+        await state.set_state(Booking.screenshot)
+    except Exception as e:
+        await call.message.edit_text(
+            f"К сожалению ваша сессия была сброшена, попробуйте еще раз заново через главное меню. Спасибо за понимание :).",
+            reply_markup=res_keys
+        )
 
 
 @dp.message(Booking.screenshot)
@@ -210,17 +238,23 @@ async def getting_screenshot(message: types.Message, state: FSMContext):
 
 @dp.callback_query(F.data == "back_to_date")
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    """Возврат в панель с локациями"""
-    selected_location = await state.get_value("selected_location")
+    try:
+        await callback.answer()
+        """Возврат в панель с локациями"""
+        selected_location = await state.get_value("selected_location")
 
-    await state.set_state(Booking.day)
+        await state.set_state(Booking.day)
 
-    await callback.message.edit_text(
-        f"📍 Выбрана локация: {locs[selected_location]}\n\n"
-        f"📅 Теперь выберите дату:",
-        reply_markup=CalendarUtils.get_date_keyboard(days_ahead=7)
-    )
+        await callback.message.edit_text(
+            f"📍 Выбрана локация: {locs[selected_location]}\n\n"
+            f"📅 Теперь выберите дату:",
+            reply_markup=CalendarUtils.get_date_keyboard(days_ahead=7)
+        )
+    except Exception as e:
+        await callback.message.edit_text(
+            f"К сожалению ваша сессия была сброшена, попробуйте еще раз заново через главное меню. Спасибо за понимание :)",
+            reply_markup=res_keys
+        )
 
 
 @dp.callback_query(F.data == "back_to_location")
@@ -239,28 +273,34 @@ async def main_menu(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data == "back_to_time")
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer("Пожалуйста подождите немного. Проводится поиск свободных кортов ☺️", show_alert=True)
-    selected_date = await state.get_value("selected_date")
-    selected_location = await state.get_value("selected_location")
-    selected_time = await state.get_value('selected_time')
+    try:
+        await callback.answer("Пожалуйста подождите немного. Проводится поиск свободных кортов ☺️", show_alert=True)
+        selected_date = await state.get_value("selected_date")
+        selected_location = await state.get_value("selected_location")
+        selected_time = await state.get_value('selected_time')
 
-    selected_day = selected_date.split("-")
-    year = int(selected_day[0])
-    month = int(selected_day[1])
-    day = int(selected_day[2])
+        selected_day = selected_date.split("-")
+        year = int(selected_day[0])
+        month = int(selected_day[1])
+        day = int(selected_day[2])
 
-    db.kill_pending(selected_location, selected_date, selected_time)
+        db.kill_pending(selected_location, selected_date, selected_time)
 
-    await state.update_data(selected_date=selected_date)
-    selected_location = await state.get_value("selected_location")
+        await state.update_data(selected_date=selected_date)
+        selected_location = await state.get_value("selected_location")
 
-    await state.set_state(Booking.time)
-    k = await CalendarUtils.get_time_free_slots(selected_location, year, month, day)
-    await callback.message.edit_text(
-        f"📍 Выбрана локация: {locs[selected_location]}\n"
-        f"📅 Выбрана дата: {selected_date}\n⏳ Выберите время. Доступные время для бронирования:",
-        reply_markup=k
-    )
+        await state.set_state(Booking.time)
+        k = await CalendarUtils.get_time_free_slots(selected_location, year, month, day)
+        await callback.message.edit_text(
+            f"📍 Выбрана локация: {locs[selected_location]}\n"
+            f"📅 Выбрана дата: {selected_date}\n⏳ Выберите время. Доступные время для бронирования:",
+            reply_markup=k
+        )
+    except Exception as exp:
+        await callback.message.edit_text(
+            f"К сожалению ваша сессия была сброшена, попробуйте еще раз заново через главное меню. Спасибо за понимание :)",
+            reply_markup=res_keys
+        )
 
 
 @dp.callback_query(F.data == "main_menu")
@@ -291,6 +331,13 @@ async def cancel_booking(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=res_keys
     )
     await callback.answer("Бронирование отменено")
+
+@dp.callback_query()
+async def after_restart(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        f"К сожалению ваша сессия была сброшена, попробуйте еще раз заново через главное меню. Спасибо за понимание :)",
+        reply_markup=res_keys
+    )
 
 
 async def main():

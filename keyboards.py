@@ -2,6 +2,14 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime, timedelta, date
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from google_calendar import *
+from aiogram import Bot
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
+keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="🎾 Открыть приложение", web_app=WebAppInfo(url="https://tennisplus.uz/"))
+    ]
+])
 
 
 res_keys = InlineKeyboardMarkup(
